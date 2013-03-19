@@ -96,7 +96,7 @@ cd ..
 3. Create PKCS#12 cert for your browser
    Using the returned cert from the CA we convert it together with the secret key part to a PKCS#12
    #+BEGIN_SRC sh
-/cert2pkcs12.sh user
+./cert2pkcs12.sh user
    #+END_SRC
 
    This asks for a passphrase which is needed when importing into the browser.
