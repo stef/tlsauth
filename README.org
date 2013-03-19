@@ -11,7 +11,7 @@ authenticated or not, routing unauthenticated users to static html for
 example while authenticated users having access to some dynamic
 content.
 
-** install
+** CA and https service install
 
 1. create a "localhost CA" in ./root-ca
     #+BEGIN_SRC sh
