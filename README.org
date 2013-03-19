@@ -108,3 +108,9 @@ cd ..
   4. on the "Your Certificates" tab click on the "Import" button and load the file "user.cert.p12"
 
   if everything went ok the new certificate should appear under the "Your Certificates" tab
+
+5. If you now surf to https://localhost with this firefox, the flask
+   application should report back your distinguished name. If you
+   browse to this location with another browser which lacks this
+   certificate you will probably see the default nginx installation
+   html page.
