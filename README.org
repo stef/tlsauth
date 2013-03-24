@@ -110,20 +110,24 @@ cd ..
    convenience feature also the root CA cert should be sent to the
    user, so he can import this also in his CA store.
 3. Create PKCS#12 cert for your browser
-   Using the returned cert from the CA we convert it together with the secret key part to a PKCS#12
+   Using the returned cert from the CA we convert it together with the
+   secret key part to a PKCS#12
    #+BEGIN_SRC sh
 cert2pkcs12.sh user
    #+END_SRC
-   This asks for a passphrase which is needed only once when importing into the browser.
+   This asks for a passphrase which is needed only once when importing
+   into the browser.
 4. Import the certificates in Firefox
   1. Using the menu open the Preferences dialog.
   2. Select the Advanced toolbar icon
   3. click on the "View certificates" button
   4. On the "Authorities" tab click on the Import button and import
      the root CA cert (this must be supplied by the CA to you).
-  5. on the "Your Certificates" tab click on the "Import" button and load the file "user.cert.p12"
+  5. on the "Your Certificates" tab click on the "Import" button and
+     load the file "user.cert.p12"
 
-  if everything went ok the new certificate should appear under the "Your Certificates" tab
+  if everything went ok the new certificate should appear under the
+  "Your Certificates" tab
 5. Store away user.key again together with user.cert.p12 in a safe
    offline location (maybe your backup?), if you reinstall your
    browser you want to import user.cert.p12 back into it again.
@@ -145,7 +149,8 @@ ca=CertAuthority('CA/public/root.pem',   # public RSA key in PEM
                  'CA/conf/serial',       # storage for a counter
                  'CA/dummy.pem',         # a helper dummy cert for pytlsauth
                  'http://www.example.com/CA.crl',
-                                         # the URL to this CAs certificate revocation list
+                                         # the URL to this CAs certificate
+                                         # revocation list
                  'CA/incoming',          # directory to store incoming CSRs
                  )
 

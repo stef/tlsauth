@@ -13,7 +13,7 @@ MBSTRING_ASC  = MBSTRING_FLAG | 1
 def gencert(name, mail, org, ca):
     """ automagically creates a PKCS12 cert in a totally untrusted but
         convenient way if you want to do this the correct way, then
-        read certs-done-r8.org
+        use genkeycsr and a manual procedure.
     """
     sec,pub=genkey()
     csr=gencsr(sec, name, mail, org)
