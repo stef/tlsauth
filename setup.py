@@ -9,7 +9,6 @@ setup(
     version = "0.2",
     author = "Stefan Marsiske",
     author_email = "s@ctrlc.hu",
-    summary = ("An encrypted persistent dictionary"),
     license = "BSD",
     keywords = "crypto authentication TLS certificate x509 CA",
     py_modules=['tlsauth'],
