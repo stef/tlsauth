@@ -74,5 +74,5 @@ echo "01" > conf/serial
 touch conf/index
 
 # create dummy.pem for pytlsauth
-../dummy.sh
+dummy.sh
 cd -

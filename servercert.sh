@@ -17,4 +17,4 @@ emailAddress_max               = 64
 EOF
 trap "rm -f $tmpconf" 0 1 2 3 15
 openssl req -new -key "$1".key -out "$1".csr -config $tmpconf
-echo "sign this with cd <root-ca>; ../signcert.sh ../$1 ; cd -"
+echo "sign this with cd <root-ca>; signcert.sh ../$1 ; cd -"
