@@ -288,8 +288,7 @@ mail(gencert('s', 's@ctrlc.hu', 'ctrlc', ca),
      ext='p12')
 
 # this is the correct - but less automagic - procedure
-#sec, pub, csr = genkeycsr('joe', 'joe@example.com', 'ACME Inc.')
-sec, pub, csr = genkeycsr('stef', 's@ctrlc.hu', 'ctrlc')
+sec, pub, csr = genkeycsr('joe', 'joe@example.com', 'ACME Inc.')
 
 # send csr to CA,
 ca.submit(csr)
