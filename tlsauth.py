@@ -4,7 +4,7 @@ import M2Crypto as m2
 import OpenSSL as ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
-import os, smtplib, datetime, hashlib, jinja2
+import os, smtplib, datetime, hashlib
 BASEPATH = os.path.dirname(os.path.abspath(__file__))
 
 MBSTRING_FLAG = 0x1000
