@@ -20,7 +20,7 @@ def gencert(name, mail, org, ca):
     cert=ca.signcsr(csr)
     return pkc12(sec,cert,ca)
 
-def genkeycsr(name, mail, org):
+def genkeycsr(name, mail, org=None):
     """ creates a 4K RSA key and a related CSR based on the parameters
     """
     sec,pub=genkey()
@@ -45,7 +45,7 @@ def gencsr(key, name, email, org):
     # create csr
     csr = m2.X509.Request()
     dn = m2.X509.X509_Name()
-    dn.add_entry_by_txt(field='O', type=MBSTRING_ASC, entry=org, len=-1, loc=-1, set=0 )
+    if org: dn.add_entry_by_txt(field='O', type=MBSTRING_ASC, entry=org, len=-1, loc=-1, set=0 )
     dn.add_entry_by_txt(field='CN', type=MBSTRING_ASC, entry=name, len=-1, loc=-1, set=0 )
     dn.add_entry_by_txt(field='emailAddress', type=MBSTRING_ASC, entry=email, len=-1, loc=-1, set=0 )
     csr.set_subject_name(dn)
@@ -126,14 +126,13 @@ def load(path):
 class CertAuthority(object):
     """represents a CA
     """
-    def __init__(self, pub, sec, serial, dummy, crl, incoming):
+    def __init__(self, pub, sec, serial, crl, incoming):
         """Initializes the CA
 
         Arguments:
         - `pub`: path to cert of CA
         - `sec`: path to private key of CA
         - `serial`: path to file containing serial number
-        - `dummy`: path for source of authorityKeyIdentifier
         - `crl`: url to the CRL
         - `incoming`: path to files containing CSRs to be signed
         """
@@ -141,7 +140,6 @@ class CertAuthority(object):
         self._sec = load(sec)
         self._serial = int(load(serial))
         self._serialfname = serial
-        self._dummy = load(dummy)
         self._crl = crl
         self._incoming = incoming
         # calculate dn
@@ -204,7 +202,7 @@ class CertAuthority(object):
         cert.add_ext(m2.X509.new_extension('subjectKeyIdentifier', sub_key_id))
 
         # Authority Identifier
-        bio = m2.BIO.MemoryBuffer(self._dummy)
+        bio = m2.BIO.MemoryBuffer(self._pub)
         dummy = m2.X509.load_cert_bio(bio)
         cert.add_ext(dummy.get_ext('authorityKeyIdentifier'))
 
@@ -267,7 +265,6 @@ class CertAuthority(object):
 ca=CertAuthority('CA/public/root.pem',
                  'CA/private/root.pem',
                  'CA/conf/serial',
-                 'CA/dummy.pem',
                  'http://www.example.com/ctrlCA.crl',
                  'CA/incoming',
                  )

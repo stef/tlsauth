@@ -147,7 +147,6 @@ cert2pkcs12.sh user
 ca=CertAuthority('CA/public/root.pem',   # public RSA key in PEM
                  'CA/private/root.pem',  # public RSA key in PEM
                  'CA/conf/serial',       # storage for a counter
-                 'CA/dummy.pem',         # a helper dummy cert for pytlsauth
                  'http://www.example.com/CA.crl',
                                          # the URL to this CAs certificate
                                          # revocation list
