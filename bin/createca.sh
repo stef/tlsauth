@@ -72,7 +72,4 @@ EOF
 openssl req -nodes -config conf/openssl.conf -days 1825 -x509 -newkey rsa:4096 -out public/root.pem -outform PEM
 echo "01" > conf/serial
 touch conf/index
-
-# create dummy.pem for pytlsauth
-dummy.sh
 cd -
