@@ -23,26 +23,19 @@ could enjoy seamless single-sign-on to all your services, never being
 asked for a password again.
 
 ** CA and https service install
-
-1. create a "localhost CA" in ./root-ca
+*** create a "localhost CA" in ./root-ca
     #+BEGIN_SRC sh
-createca.sh root-ca http://localhost/crl.pem
-Country Name (2 letter code) [HU]:NA
-Root CA Organization Name (eg, company) []:localhost CA
-Common Name (server FQDN) []:localhost
-Email Address []:user@localhost
+./tlsauth.py root-ca createca http://localhost/crl.pem "Example CA" ca@example.com || exit 1
     #+END_SRC
-2. create https server certificate
+*** create https server certificate
     #+BEGIN_SRC sh
-servercert.sh localhost
+./tlsauth.py root-ca newcsr localhost root@localhost >server.key
     #+END_SRC
-3. Sign server cert with CA
+*** Sign server cert with CA
     #+BEGIN_SRC sh
-cd root-ca
-signcert.sh localhost
-cd -
+./tlsauth.py sign <server.key >server.pem
     #+END_SRC
-4. Setup nginx to serve
+*** Setup nginx to serve
     #+BEGIN_SRC sh
 server {
     listen        443;
@@ -70,19 +63,42 @@ server {
   Now if users have a proper client cert installed the environment of
   the WSGI application will contain the variables 'verified' and 'dn'
   variables set accordingly.
+** PGP backend
+   TLSAuth comes with a gnupg backend. It clones a pre-existing pgp
+   public key suitable for signing (RSA only currently) and creates a
+   X509 CA certificate. For signing this and all issued certificates
+   the private part of the PGP key is necessary. This also works with
+   all supported OpenPGP tokens.
 
+   To create a gnupg enabled CA, setup your pgp signing key if you
+   need one, and then:
+    #+BEGIN_SRC sh
+./tlsauth.py test-ca gpg createca http://example.com/crl.pem <pgp key id>
+    #+END_SRC
+   will create a new CA in the 'test-ca' directory, with the name,
+   email, creation and expiration date from the PGP key.
+
+   all tlsauth.py commands should work the same, the only difference
+   is that each command must be preceeded by a 'pgp' token, like this:
+
+    #+BEGIN_SRC sh
+./tlsauth.py test-ca pgp newcsr joe joe@example.com | ./tlsauth.py test-ca pgp sign
+    #+END_SRC
+
+   In python simply instantiate a PGPCertAuthority instead of a CertAuthority.
+** webserver Demo
   There's a bundled demo, to try it out:
-1. set up uwsgi
+*** set up uwsgi
     #+BEGIN_SRC sh
 edit flask-demo/tlsdemo_wsgi.py
     #+END_SRC
-2. install python dependencies
+*** install python dependencies
     #+BEGIN_SRC sh
 virtualenv --distribute env
 source env/bin/activate
 pip install Flask uwsgi
     #+END_SRC
-3. run flask application
+*** run flask application
     #+BEGIN_SRC sh
 basedir=$PWD
 env/bin/uwsgi --socket 127.0.0.1:8080 --chdir $basedir/flask-demo -pp $basedir -w tlsdemo_wsgi -p 1 --virtualenv $basedir/env
@@ -91,7 +107,7 @@ env/bin/uwsgi --socket 127.0.0.1:8080 --chdir $basedir/flask-demo -pp $basedir -
 How to create a proper Client certificate.
 1. Create a client certificate
    #+BEGIN_SRC sh
-gencert.sh user
+./tlsauth.py root-ca newcsr joe joe@localhost >joe.key
    #+END_SRC
    send the resulting "user.csr" to the CA for signing. In this case
    you are both, but in a normal case this step is done by arbitrary
@@ -102,9 +118,7 @@ gencert.sh user
    once more.
 2. CA signs users cert signing request
    #+BEGIN_SRC sh
-cd root-ca
-signcert.sh ../user
-cd ..
+./tlsauth.py root-ca sign <joe.key >joe.cert
    #+END_SRC
    CA sends back the signed 'user.cert" to the sender. As a
    convenience feature also the root CA cert should be sent to the
@@ -113,7 +127,7 @@ cd ..
    Using the returned cert from the CA we convert it together with the
    secret key part to a PKCS#12
    #+BEGIN_SRC sh
-cert2pkcs12.sh user
+./tlsauth.py root-ca p12 joe.key <joe.cert >joe.p12
    #+END_SRC
    This asks for a passphrase which is needed only once when importing
    into the browser.
@@ -128,9 +142,10 @@ cert2pkcs12.sh user
 
   if everything went ok the new certificate should appear under the
   "Your Certificates" tab
-5. Store away user.key again together with user.cert.p12 in a safe
-   offline location (maybe your backup?), if you reinstall your
-   browser you want to import user.cert.p12 back into it again.
+5. Store away private key in joe.key again together with the pkcs12
+   cert joe.p12 in a safe offline location (maybe your backup?), if
+   you reinstall your browser you want to import user.cert.p12 back
+   into it again.
 6. If you now surf to https://localhost with this firefox, the flask
    application should report back your distinguished name. If you
    browse to this location with another browser which lacks this
@@ -138,58 +153,4 @@ cert2pkcs12.sh user
    html page.
 
 ** Python usage
-#+BEGIN_SRC python
-# DEMO code
-# 1st initialize your own CA by running from the shell:
-# ./createca.sh CA
-
-# where is our CA?
-ca=CertAuthority('CA/public/root.pem',   # public RSA key in PEM
-                 'CA/private/root.pem',  # public RSA key in PEM
-                 'CA/conf/serial',       # storage for a counter
-                 'http://www.example.com/CA.crl',
-                                         # the URL to this CAs certificate
-                                         # revocation list
-                 'CA/incoming',          # directory to store incoming CSRs
-                 )
-
-# do not try this at home.
-# warning: irresponsible blind trust in 3rd parties
-# warning: will be ignored anyway.
-# gencert('joe', 'joe@example.com', 'ACME Inc.', ca)
-# even worse (and intentionally ugly)
-mail(gencert('joe', 'joe@example.com', 'ACME Inc.', ca),
-     "Howdy.\n\n" \
-     "Your login certificate from %s is attached.\n\n" \
-     "You should import this into your browser, keep a safe\n" \
-     "copy and delete this mail and other copies containing it.\n\n" \
-     "Have fun and respect",
-     {'emailAddress': 'joe@example.com', 'CN': 'joe', 'O': 'ACME Inc.'},
-     ca.dn,
-     ext='p12')
-
-# this is the correct - but less automagic - procedure
-sec, pub, csr = genkeycsr('joe', 'joe@example.com', 'ACME Inc.')
-
-# send csr to CA,
-ca.submit(csr)
-
-# who the after diligent inspection either does
-cert=ca.signcsr(csr)
-print cert
-# or bulk processes multiple incoming CSRs
-# (notice we're signing the same csr twice here, don't do this at
-# home, this is only for demo purposes)
-certs=ca.signincoming()
-#print certs
-mailsigned(certs)
-
-# or uses the supplied signcert.sh script. Anyhow, the CA sends the
-# resulting cert
-
-# ...back to the user who after calling
-pkc12(sec,cert,ca)
-
-# imports both the result and ca._pub.
-# and stores sec, cert away in a safe offline location.
-#+END_SRC
+   see test.py
