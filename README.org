@@ -63,29 +63,6 @@ server {
   Now if users have a proper client cert installed the environment of
   the WSGI application will contain the variables 'verified' and 'dn'
   variables set accordingly.
-** PGP backend
-   TLSAuth comes with a gnupg backend. It clones a pre-existing pgp
-   public key suitable for signing (RSA only currently) and creates a
-   X509 CA certificate. For signing this and all issued certificates
-   the private part of the PGP key is necessary. This also works with
-   all supported OpenPGP tokens.
-
-   To create a gnupg enabled CA, setup your pgp signing key if you
-   need one, and then:
-    #+BEGIN_SRC sh
-./tlsauth.py test-ca gpg createca http://example.com/crl.pem <pgp key id>
-    #+END_SRC
-   will create a new CA in the 'test-ca' directory, with the name,
-   email, creation and expiration date from the PGP key.
-
-   all tlsauth.py commands should work the same, the only difference
-   is that each command must be preceeded by a 'pgp' token, like this:
-
-    #+BEGIN_SRC sh
-./tlsauth.py test-ca pgp newcsr joe joe@example.com | ./tlsauth.py test-ca pgp sign
-    #+END_SRC
-
-   In python simply instantiate a PGPCertAuthority instead of a CertAuthority.
 ** webserver Demo
   There's a bundled demo, to try it out:
 *** set up uwsgi

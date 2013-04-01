@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import shutil, os
-from tlsauth import CertAuthority, PGPCertAuthority, mailsigned, genkeycsr, pkcs12
+from tlsauth import CertAuthority, mailsigned, genkeycsr, pkcs12
 
 # DEMO code
 # initialize your own CA by running
@@ -49,22 +49,4 @@ print "dropped good pkcs12 cert"
 # imports both the result and ca._pub.
 # and stores sec, cert away in a # safe offline location.
 
-# Even cooler is to use PGP as backend for the CA you can have your
-# poor mans HSM with a cryptostick, that does the signing, of real
-# x509 certs. Of course this works also with normal PGP keys on your
-# disk.
-shutil.rmtree('test-ca')
-ca=PGPCertAuthority.createca('test-ca', 'http://www.example.com/crl.pem', '128BAA40')
-
-csr, x509cert=ca.createCAcsr(org="ca0557ef CA")
-cert=ca.sign(csr, x509cert)
-# you should import this as a CA into your browser
-print cert
-
-sec, pub, csr = genkeycsr('stef', 's@ctrlc.hu', org='ctrlc')
-cert=ca.signcsr(csr)
-print cert
-# use pkcs12 to combine cert and sec into a cert for your browser
-pkcs12(sec, cert, ca._pub, pwd="secret1")
-print "dropped correct pkcs12 cert"
 if os.path.exists('test-ca'): shutil.rmtree('test-ca')
