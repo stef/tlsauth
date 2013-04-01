@@ -4,8 +4,7 @@ import M2Crypto as m2
 import OpenSSL as ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
-import os, smtplib, datetime, hashlib
-import binascii, sys, getpass
+import os, smtplib, datetime, hashlib, sys, getpass
 
 MBSTRING_FLAG = 0x1000
 MBSTRING_ASC  = MBSTRING_FLAG | 1
