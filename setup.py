@@ -12,7 +12,7 @@ setup(
     license = "BSD",
     keywords = "crypto authentication TLS certificate x509 CA",
     py_modules=['tlsauth'],
-    install_requires = ['M2Crypto', 'pyOpenSSL', 'pyasn1', 'python-openssl'],
+    install_requires = ['M2Crypto', 'pyOpenSSL', 'pyasn1'],
     scripts=['bin/cert2pkcs12.sh', 'bin/createca.sh', 'bin/gencert.sh', 'bin/servercert.sh','bin/signcert.sh'],
     url = "http://packages.python.org/tlsauth",
     description = "Implements TLS Authentication - simple client certificate CA inclusive",
