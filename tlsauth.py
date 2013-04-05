@@ -55,6 +55,12 @@ def pkcs12(key, cert, root_cert):
     p12.set_ca_certificates((ssl.crypto.load_certificate(ssl.SSL.FILETYPE_PEM, root_cert),))
     return p12.export(getpass.getpass("Password for importing this key: "))
 
+def spkac2pem(pk):
+    csr = m2.X509.Request()
+    csr.set_subject_name(pk.subject)
+    csr.set_pubkey(pk.pkey )
+    return csr.as_pem()
+
 def mailsigned(signed):
     """ mails the signed certs to their listed emailAddress from
         the emailAddress of the CA
@@ -120,18 +126,19 @@ class CertAuthority(object):
     """represents a CA
     """
     #def __init__(self, pub, sec, serial, crl, incoming):
-    def __init__(self, cfg):
+    def __init__(self, path):
         """Initializes the CA
         """
-        with open(cfg+'/ca.cfg','r') as fd:
+        self.path=path
+        with open(path+'/ca.cfg','r') as fd:
             cfg=dict([[x.strip() for x in line.split('=')] for line in fd.readlines()])
 
-        self._pub = load(cfg['pub'])
-        self._sec = load(cfg['sec'])
-        self._serial = int(load(cfg['serial']))
-        self._serialfname = cfg['serial']
+        self._pub = load(path+'/'+cfg['pub'] if cfg['pub'][0]!='/' else cfg['pub'])
+        self._sec = load(path+'/'+cfg['sec'] if cfg['sec'][0]!='/' else cfg['sec'])
+        self._serial = int(load(path+'/'+cfg['serial'] if cfg['serial'][0]!='/' else cfg['serial']))
+        self._serialfname = path+'/'+cfg['serial' if cfg['serial'][0]!='/' else cfg['serial']]
         self._crl = cfg['crl']
-        self._incoming = cfg['incoming']
+        self._incoming = path+'/'+cfg['incoming' if cfg['incoming'][0]!='/' else cfg['incoming']]
         # calculate dn
         bio = m2.BIO.MemoryBuffer(self._pub)
         tmp = m2.X509.load_cert_bio(bio)
@@ -327,10 +334,10 @@ class CertAuthority(object):
         with open(path+'/ca.cfg','w') as fd:
             fd.write("crl=%s\nsec=%s\npub=%s\nserial=%s\nincoming=%s" % (
                 crl,
-                path+"/private/root.pem",
-                path+"/public/root.pem",
-                path+"/conf/serial",
-                path+"/incoming"))
+                os.path.abspath(path+"/private/root.pem"),
+                os.path.abspath(path+"/public/root.pem"),
+                os.path.abspath(path+"/conf/serial"),
+                os.path.abspath(path+"/incoming")))
 
         return CertAuthority(path)
 
