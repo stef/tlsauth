@@ -4,12 +4,12 @@ import M2Crypto as m2
 import OpenSSL as ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
+from pyspkac import SPKAC
 import os, smtplib, datetime, hashlib, sys, getpass
 
 MBSTRING_FLAG = 0x1000
 MBSTRING_ASC  = MBSTRING_FLAG | 1
 
-pubtypes=['RSA Encrypt or Sign',"RSA Sign-Only"]
 # for more objectIds see: https://tools.ietf.org/html/rfc3279#section-2.2.1
 # https://tools.ietf.org/html/rfc4055#section-2.1
 
@@ -30,7 +30,7 @@ def genkey (klen=4096, pext=0x10001 ):
     return (keypair.as_pem(cipher=None),
             m2.RSA.new_pub_key(keypair.pub()).as_pem(cipher=None))
 
-def gencsr(key, name, email, org):
+def gencsr(key, name=None, email=None, org=None):
     """ generates a CSR using the supplied parameters
     """
     key=loadkey(key)
@@ -39,8 +39,8 @@ def gencsr(key, name, email, org):
     csr = m2.X509.Request()
     dn = m2.X509.X509_Name()
     if org: dn.add_entry_by_txt(field='O', type=MBSTRING_ASC, entry=org, len=-1, loc=-1, set=0 )
-    dn.add_entry_by_txt(field='CN', type=MBSTRING_ASC, entry=name, len=-1, loc=-1, set=0 )
-    dn.add_entry_by_txt(field='emailAddress', type=MBSTRING_ASC, entry=email, len=-1, loc=-1, set=0 )
+    if name: dn.add_entry_by_txt(field='CN', type=MBSTRING_ASC, entry=name, len=-1, loc=-1, set=0 )
+    if email: dn.add_entry_by_txt(field='emailAddress', type=MBSTRING_ASC, entry=email, len=-1, loc=-1, set=0 )
     csr.set_subject_name(dn)
     csr.set_pubkey(pkey=key )
     csr.sign(pkey=key, md='sha512' )
@@ -59,6 +59,20 @@ def spkac2pem(pk):
     csr = m2.X509.Request()
     csr.set_subject_name(pk.subject)
     csr.set_pubkey(pk.pkey )
+    return csr.as_pem()
+
+def spkac2cert(pk, email, name=None):
+    pk=SPKAC(pk)
+    csr = m2.X509.Request()
+    csr.set_subject_name(pk.subject)
+    csr.set_pubkey(pk.pkey )
+    dn=csr.get_subject()
+    print dn, len(dn), type(dn)
+    if len(dn)==0:
+        dn = m2.X509.X509_Name()
+        if name: dn.add_entry_by_txt(field='CN', type=MBSTRING_ASC, entry=name, len=-1, loc=-1, set=0 )
+        dn.add_entry_by_txt(field='emailAddress', type=MBSTRING_ASC, entry=email, len=-1, loc=-1, set=0 )
+        csr.set_subject_name(dn)
     return csr.as_pem()
 
 def mailsigned(signed):
@@ -92,7 +106,7 @@ def mail(data, txt, to, ca, ext='pem'):
 
     att = MIMEBase('application', 'x-x509-user-cert')
     att.set_payload(data)
-    att.add_header('Content-Disposition', 'attachment', filename='%s-cert.%s' % (to['CN'], ext))
+    att.add_header('Content-Disposition', 'attachment', filename='%s-cert.%s' % (to.get('CN',to['emailAddress']), ext))
     outer.attach(att)
 
     composed = outer.as_string()
