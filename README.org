@@ -45,6 +45,9 @@ offline location, as it can be used to mount a MITM attack against all
 users, who trust this key. You need this key in 1 year, when you need
 to renew your client CA certificate (per default it's only valid for
 one year!)
+    #+BEGIN_SRC sh
+mv root-ca/private/root.key <private and save location>
+    #+END_SRC
 *** Setup nginx to serve
     #+BEGIN_SRC sh
 server {
