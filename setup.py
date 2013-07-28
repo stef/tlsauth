@@ -6,7 +6,7 @@ def read(fname):
 
 setup(
     name = "tlsauth",
-    version = "0.3.1-5",
+    version = "0.4",
     author = "Stefan Marsiske",
     author_email = "s@ctrlc.hu",
     license = "BSD",

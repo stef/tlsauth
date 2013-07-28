@@ -150,13 +150,13 @@ class CertAuthority(object):
         self._pub = load(path+'/'+cfg['pub'] if cfg['pub'][0]!='/' else cfg['pub'])
         self._sec = load(path+'/'+cfg['sec'] if cfg['sec'][0]!='/' else cfg['sec'])
         self._serial = int(load(path+'/'+cfg['serial'] if cfg['serial'][0]!='/' else cfg['serial']))
-        self._serialfname = path+'/'+cfg['serial' if cfg['serial'][0]!='/' else cfg['serial']]
+        self._serialfname = (path+'/'+cfg['serial']) if cfg['serial'][0]!='/' else cfg['serial']
         self._crl = cfg['crl']
-        self._incoming = path+'/'+cfg['incoming' if cfg['incoming'][0]!='/' else cfg['incoming']]
+        self._incoming = (path+'/'+cfg['incoming']) if cfg['incoming'][0]!='/' else cfg['incoming']
         # calculate dn
         bio = m2.BIO.MemoryBuffer(self._pub)
-        tmp = m2.X509.load_cert_bio(bio)
-        self.dn = todn(tmp.get_issuer())
+        self.cert = m2.X509.load_cert_bio(bio)
+        self.dn = todn(self.cert.get_issuer())
 
     def serial(self):
         """ increments persistently and returns the serial counter
@@ -280,7 +280,7 @@ class CertAuthority(object):
         return signed
 
     @classmethod
-    def createca(self, path, crl, name, mail, org=None, valid=5):
+    def createca(self, path, crl, name, mail, org=None, valid=5, parentCA=None):
         """ creates and initializes a new CA on the filesystem
         """
         if not os.path.exists(path):
@@ -308,7 +308,10 @@ class CertAuthority(object):
         dn.add_entry_by_txt(field='CN', type=MBSTRING_ASC, entry=name, len=-1, loc=-1, set=0 )
         dn.add_entry_by_txt(field='emailAddress', type=MBSTRING_ASC, entry=mail, len=-1, loc=-1, set=0 )
         cert.set_subject_name(dn)
-        cert.set_issuer_name(dn)
+        if parentCA:
+            cert.set_issuer_name(parentCA.cert.get_issuer())
+        else:
+            cert.set_issuer_name(dn)
 
         # serial 8 byte random
         serial = int(ssl.rand.bytes(8).encode('hex'),16)
@@ -326,6 +329,8 @@ class CertAuthority(object):
 
         # Set the X509 extenstions
         cert.add_ext(m2.X509.new_extension('basicConstraints', 'CA:TRUE'))
+        if parentCA:
+            cert.add_ext(m2.X509.new_extension('keyUsage', 'critical, keyCertSign'))
 
         # Create the subject key identifier
         modulus_str = cert.get_pubkey().get_modulus()
@@ -334,12 +339,19 @@ class CertAuthority(object):
         cert.add_ext(new_extension('subjectKeyIdentifier', sub_key_id))
 
         # Authority Identifier
-        authid='keyid,issuer:always'
-        cert.add_ext(new_extension('authorityKeyIdentifier', authid, issuer=cert))
+        if parentCA:
+            cert.add_ext(parentCA.cert.get_ext('authorityKeyIdentifier'))
+        else:
+            authid='keyid,issuer:always'
+            cert.add_ext(new_extension('authorityKeyIdentifier', authid, issuer=cert))
 
         cert.add_ext(m2.X509.new_extension('nsCaRevocationUrl', crl))
 
-        cert.sign( pkey=sec, md='sha512' )
+        if parentCA:
+            cert.sign(pkey=loadkey(parentCA._sec),md='sha512')
+        else:
+            # self sign
+            cert.sign(pkey=sec,md='sha512')
 
         with open(path+'/public/root.pem','w') as fd:
             fd.write(cert.as_pem())
@@ -404,6 +416,8 @@ def new_extension(name, value, critical=0, issuer=None, _pyfree = 1):
     return x509_ext
 
 def run():
+    cmds=['genkey', 'createca', 'blindgen', 'gencsr',
+          'newcsr', 'submit', 'sign', 'batchsign', 'p12']
     if 'help' in sys.argv[1:]:
         print """tlsauth parameters
 User operations
@@ -412,7 +426,7 @@ User operations
     newcsr name email [organization]           generates a new RSA keypair and a CSR
     p12 privatekey                             combines a signed CSR and a private key into a PKCS12 cert
 CA operations (path must point to dir containing ca.cfg)
-    path createca crl name mail [org] [valid]  creates a new CA
+    path createca crl name mail [org] [valid] [parentCA] creates a new CA or client CA if parent CA is existing
     path blindgen name email [organization]    blindly generates a PKCS12 certificate,
     path submit                                reads a CSR from stdin and stores it in the CA incoming queue
     path sign                                  reads a CSR from stdin and signs it with the CA root key
@@ -433,21 +447,25 @@ options (combine with the above)
     path=sys.argv[1]
     if 'createca' in sys.argv[2:]:
         start=sys.argv.index('createca')+1
-        fields=sys.argv[start:start+6]
+        fields=sys.argv[start:start+7]
         crl=fields[0]
         name=fields[1]
         mail=fields[2]
-        org=None
+        parentCA=org=None
         valid=5
-        if len(fields)==4:
-            try: valid=int(fields[3].strip())
-            except: org=fields[3]
-        elif len(fields)==5:
-            org=fields[3]
-            valid=int(fields[4])
-        return CertAuthority.createca(path,crl, name,mail, org, valid)
-
-    ca=CertAuthority(path)
+        for field in sys.argv[start+3:start+7]:
+            if field in cmds:
+                break
+            try:
+                valid=int(fields.strip())
+            except:
+                try:
+                    parentCA=CertAuthority(field)
+                except:
+                    org=field
+        ca=CertAuthority.createca(path,crl, name,mail, org, valid, parentCA)
+    else:
+        ca=CertAuthority(path)
 
     if 'blindgen' in sys.argv[1:]:
         start=sys.argv[1:].index('blindgen')+1

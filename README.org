@@ -25,7 +25,11 @@ asked for a password again.
 ** CA and https service install
 *** create a "localhost CA" in ./root-ca
     #+BEGIN_SRC sh
-./tlsauth.py root-ca createca http://localhost/crl.pem "Example CA" ca@example.com || exit 1
+./tlsauth.py root-ca createca http://localhost/crl.pem "Example CA" ca@example.com
+    #+END_SRC
+*** create a "client authentication CA" in ./sub-ca
+    #+BEGIN_SRC sh
+./tlsauth.py sub-ca createca http://localhost/client-crl.pem "hostname client CA" email@example.com root-ca
     #+END_SRC
 *** create https server certificate
     #+BEGIN_SRC sh
@@ -35,6 +39,12 @@ asked for a password again.
     #+BEGIN_SRC sh
 ./tlsauth.py sign <server.key >server.pem
     #+END_SRC
+*** Remove Root CA private key
+It is important to remove and store the root CA private key in a safe
+offline location, as it can be used to mount a MITM attack against all
+users, who trust this key. You need this key in 1 year, when you need
+to renew your client CA certificate (per default it's only valid for
+one year!)
 *** Setup nginx to serve
     #+BEGIN_SRC sh
 server {
@@ -42,9 +52,9 @@ server {
     ssl on;
     server_name localhost;
 
-    ssl_certificate      <pathto>/tlsauth/localhost.cert;
-    ssl_certificate_key  <pathto>/tlsauth/localhost.key;
-    ssl_client_certificate <pathto>/tlsauth/root-ca/public/root.pem;
+    ssl_certificate      <pathto>/tlsauth/server.cert;
+    ssl_certificate_key  <pathto>/tlsauth/server.key;
+    ssl_client_certificate <pathto>/tlsauth/sub-ca/public/root.pem;
     ssl_verify_client optional;
 
     location / {
@@ -132,3 +142,11 @@ How to create a proper Client certificate.
     html page.
 ** Python usage
    see test.py
+** Changes
+*** v0.4
+    - Fixed dangerously exposed Root CA key, by introducing a sub CA
+      only for signing the client authentication keys, and thus
+      eliminating the chance for a MITM attack in case the Root CA gets
+      compromised.
+    - added install.sh
+
