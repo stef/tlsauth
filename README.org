@@ -147,9 +147,7 @@ How to create a proper Client certificate.
    see test.py
 ** Changes
 *** v0.4
-    - Fixed dangerously exposed Root CA key, by introducing a sub CA
-      only for signing the client authentication keys, and thus
-      eliminating the chance for a MITM attack in case the Root CA gets
-      compromised.
-    - added install.sh
-
+    Fixed dangerously exposed Root CA key, by introducing a sub CA
+    only for signing the client authentication keys, and thus
+    eliminating the chance for a MITM attack in case the Root CA gets
+    compromised.
