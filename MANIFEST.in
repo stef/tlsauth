@@ -1,3 +1,2 @@
 include README.org
-include install.sh
 include test.sh
