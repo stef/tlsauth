@@ -37,7 +37,7 @@ asked for a password again.
     #+END_SRC
 *** Sign server cert with CA
     #+BEGIN_SRC sh
-./tlsauth.py sign <server.key >server.pem
+./tlsauth.py rootca sign <server.key >server.pem
     #+END_SRC
 *** Remove Root CA private key
 It is important to remove and store the root CA private key in a safe
